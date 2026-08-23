@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="HGPF AI-RAG 臺灣客家族譜證據數位治理系統">
   <title>HGPF｜客家族譜證據治理</title>
-  <link rel="stylesheet" href="/static/style.css?v=5">
+  <link rel="stylesheet" href="/static/style.css?v=6">
 </head>
 <body>
   <div class="shell">
@@ -171,14 +171,14 @@
 
   <dialog id="claim-dialog">
     <form method="dialog" id="claim-form" class="dialog-form">
-      <div class="dialog-head"><div><span class="section-no">NEW CLAIM</span><h2>建立可稽核主張</h2></div><button value="cancel" class="icon-button" aria-label="關閉">×</button></div>
+      <div class="dialog-head"><div><span class="section-no">NEW CLAIM</span><h2>建立可稽核主張</h2></div><button type="button" class="icon-button" aria-label="關閉" data-close-dialog="claim-dialog">×</button></div>
       <label>主體<input id="claim-subject" required placeholder="例如：張氏來臺祖源"></label>
       <label>主張文字<textarea id="claim-text" required placeholder="以一句可被支持或反駁的陳述表達"></textarea></label>
       <div class="field-row"><label>類型<select id="claim-type"><option>譜系主張</option><option>身分主張</option><option>遷徙主張</option><option>語言主張</option><option>風水／墓葬主張</option></select></label><label>HGPF欄位<select id="claim-field"></select></label></div>
       <label>初始信心<select id="claim-confidence"><option>待查</option><option>可能</option><option>很可能</option><option>已證</option></select></label>
-      <div class="dialog-actions"><button value="cancel" class="button ghost">取消</button><button value="default" class="button primary" id="claim-save">建立主張</button></div>
+      <div class="dialog-actions"><button type="button" class="button ghost" data-close-dialog="claim-dialog">取消</button><button type="submit" class="button primary" id="claim-save">建立主張</button></div>
     </form>
   </dialog>
-  <script src="/static/app.js?v=5"></script>
+  <script src="/static/app.js?v=6"></script>
 </body>
 </html>

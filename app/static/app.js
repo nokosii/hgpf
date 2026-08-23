@@ -145,6 +145,7 @@ function renderWriter(draft){
 }
 
 document.addEventListener('click',async event=>{
+  const closeDialog=event.target.closest('[data-close-dialog]');if(closeDialog){const dialog=document.getElementById(closeDialog.dataset.closeDialog);if(dialog?.open)dialog.close('cancel');return}
   const nav=event.target.closest('[data-view]'); if(nav){showView(nav.dataset.view);return}
   const go=event.target.closest('[data-go]');if(go){showView(go.dataset.go);return}
   const claim=event.target.closest('[data-claim-id]');if(claim){await selectClaim(claim.dataset.claimId);return}
