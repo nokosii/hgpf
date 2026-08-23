@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="HGPF AI-RAG 臺灣客家族譜證據數位治理系統">
+  <title>HGPF｜客家族譜證據治理</title>
+  <link rel="stylesheet" href="/static/style.css?v=3">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="seal" aria-hidden="true">譜</div>
+        <div><strong>HGPF</strong><span>Evidence Lab</span></div>
+      </div>
+      <div class="principle"><span></span> Evidence before narrative</div>
+      <nav aria-label="主要功能">
+        <button class="nav-item active" data-view="dashboard"><span>總</span>研究總覽</button>
+        <button class="nav-item" data-view="documents"><span>庫</span>文獻與索引</button>
+        <button class="nav-item" data-view="search"><span>檢</span>混合檢索</button>
+        <button class="nav-item" data-view="claims"><span>證</span>主張與證據</button>
+        <button class="nav-item" data-view="audit"><span>核</span>GPS 五項稽核</button>
+        <button class="nav-item" data-view="writer"><span>寫</span>受控書寫室</button>
+        <button class="nav-item" data-view="framework"><span>架</span>HGPF 31項框架</button>
+      </nav>
+      <div class="sidebar-note">
+        <strong>研究倫理提示</strong>
+        <p>系統只產生 GPS 導向稽核提示，不代表 BCG 認證。風水、族源與腔調均保留為可爭議主張。</p>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">臺灣客家族譜・證據數位治理</p>
+          <h1 id="page-title">研究總覽</h1>
+        </div>
+        <div class="top-actions">
+          <span id="health" class="health"><i></i>本機資料庫</span>
+          <button class="button ghost" id="seed-button">載入示範資料</button>
+        </div>
+      </header>
+
+      <div id="toast" role="status" aria-live="polite"></div>
+
+      <section class="view active" id="view-dashboard">
+        <div class="hero">
+          <div>
+            <span class="hero-kicker">HGPF × GPS × Hybrid RAG</span>
+            <h2>讓每一段族譜敘事，<br>都能回到證據。</h2>
+            <p>將 OCR 文獻轉成可追溯的證據卡，主動尋找反證，再由研究者核定可發布的家族史。</p>
+            <div class="hero-actions">
+              <button class="button primary" data-go="documents">開始建立文獻庫</button>
+              <button class="button light" data-go="framework">查看 HGPF 框架</button>
+            </div>
+          </div>
+          <div class="hero-mark" aria-label="四層後設資料架構">
+            <div><b>M1</b><span>描述</span></div><div><b>M2</b><span>證據</span></div>
+            <div><b>M3</b><span>稽核</span></div><div><b>M4</b><span>治理</span></div>
+          </div>
+        </div>
+        <div class="stat-grid" id="stats"></div>
+        <div class="two-column">
+          <article class="panel workflow-panel">
+            <div class="panel-head"><div><span class="section-no">S0—S5</span><h3>證據導向編修流程</h3></div></div>
+            <ol class="workflow">
+              <li><b>S0</b><div><strong>界定問題</strong><span>人物、關係、遷徙、語言、風水主張</span></div></li>
+              <li><b>S1</b><div><strong>匯入與數位化</strong><span>原件、影像、OCR、版本及權限</span></div></li>
+              <li><b>S2</b><div><strong>實體與證據關聯</strong><span>支持、反駁、限制、脈絡</span></div></li>
+              <li><b>S3</b><div><strong>GPS 稽核</strong><span>反證檢索、衝突揭露、人工處置</span></div></li>
+              <li><b>S4</b><div><strong>受控書寫</strong><span>逐句附證，不擴寫無證細節</span></div></li>
+              <li><b>S5</b><div><strong>治理與發布</strong><span>具名覆核、版本、撤回與隱私</span></div></li>
+            </ol>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><div><span class="section-no">RECENT</span><h3>最近稽核</h3></div></div>
+            <div id="recent-audits" class="empty-state">尚無稽核紀錄。</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="view" id="view-documents">
+        <div class="section-intro"><div><span class="section-no">M1・M2</span><h2>文獻建檔與可追溯索引</h2><p>不修改原始檔；建立雜湊、段落、HGPF欄位候選及本機檢索索引。</p></div></div>
+        <div class="two-column form-layout">
+          <article class="panel">
+            <div class="panel-head"><h3>從工作區匯入</h3><span class="tag">MD / TXT / PDF / DOCX</span></div>
+            <form id="import-form" class="stack-form">
+              <label>完整檔案路徑<input id="import-path" required value="C:\族譜\所有電子檔\台灣_苗栗_張姓近代族譜_1冊(37頁)_1968.md"></label>
+              <div class="field-row">
+                <label>來源類型<select id="import-type"><option>客家族譜OCR</option><option>戶籍資料</option><option>契約</option><option>墓碑田野</option><option>口述訪談</option></select></label>
+                <label>存取層級<select id="import-access"><option>研究使用</option><option>公開</option><option>宗族限定</option><option>敏感</option></select></label>
+              </div>
+              <button class="button primary" type="submit">建立索引並執行預檢</button>
+            </form>
+          </article>
+          <article class="panel upload-card">
+            <div class="panel-head"><h3>上傳單一文件</h3></div>
+            <label class="dropzone" for="upload-file"><span>＋</span><strong>選擇文件</strong><small>檔案留在本機 data/uploads</small></label>
+            <input id="upload-file" type="file" accept=".md,.txt,.pdf,.docx" hidden>
+            <p id="upload-name" class="muted">尚未選擇檔案</p>
+            <button class="button light" id="upload-button">上傳、索引並檢核</button>
+          </article>
+        </div>
+        <article class="panel table-panel">
+          <div class="panel-head"><div><span class="section-no">CORPUS</span><h3>已建檔文獻</h3></div><span id="document-count" class="tag">0 份</span></div>
+          <div class="table-wrap"><table><thead><tr><th>文獻</th><th>來源類型</th><th>段落</th><th>存取</th><th>建檔時間</th><th>檢核</th></tr></thead><tbody id="document-table"></tbody></table></div>
+        </article>
+        <div id="document-audit-result" class="empty-state document-audit-result">上傳文件或選擇既有文獻後，可執行GPS五項研究就緒度預檢與HGPF 31項候選檢核。</div>
+      </section>
+
+      <section class="view" id="view-search">
+        <div class="section-intro"><div><span class="section-no">HYBRID RAG</span><h2>混合檢索與反證搜尋</h2><p>融合全文、字元語意向量、HGPF metadata 與反證詞訊號；所有結果仍須回看原文。</p></div></div>
+        <article class="panel search-panel">
+          <form id="search-form">
+            <div class="searchbox"><input id="search-query" placeholder="例如：廣東大埔遷臺的張氏先祖，有無異說？" required><button class="button primary">檢索證據</button></div>
+            <div class="search-filters">
+              <label><input type="checkbox" id="counterevidence"> 啟用反證導向排序</label>
+              <label>綁定主張<select id="search-claim"><option value="">不綁定</option></select></label>
+              <label>HGPF欄位<select id="search-field"><option value="">全部</option></select></label>
+            </div>
+          </form>
+        </article>
+        <div class="result-summary" id="search-summary"></div>
+        <div id="search-results" class="result-list empty-state">輸入問題後開始檢索。</div>
+      </section>
+
+      <section class="view" id="view-claims">
+        <div class="section-intro"><div><span class="section-no">CLAIM–EVIDENCE</span><h2>主張與證據關係</h2><p>族譜中的每一項結論都是主張；證據可以支持、反駁、限制或僅提供脈絡。</p></div><button class="button primary" id="new-claim-button">＋ 新增主張</button></div>
+        <div class="claim-layout">
+          <article class="panel claim-list-panel"><div class="panel-head"><h3>研究主張</h3></div><div id="claim-list" class="claim-list"></div></article>
+          <article class="panel claim-detail-panel" id="claim-detail"><div class="empty-state">請選擇一項主張。</div></article>
+        </div>
+      </section>
+
+      <section class="view" id="view-audit">
+        <div class="section-intro"><div><span class="section-no">GPS-ALIGNED</span><h2>五項證明標準稽核</h2><p>檢查研究紀錄、引用、關聯、衝突及論述；結果是輔助提示，不是GPS認證。</p></div></div>
+        <article class="panel audit-picker"><label>選擇主張<select id="audit-claim"></select></label><button class="button primary" id="audit-button">執行最新稽核</button></article>
+        <div id="audit-result" class="empty-state">請選擇主張並執行稽核。</div>
+      </section>
+
+      <section class="view" id="view-writer">
+        <div class="section-intro"><div><span class="section-no">EVIDENCE-CONSTRAINED</span><h2>客家族譜受控書寫室</h2><p>只使用已掛接證據生成證明摘要；保留反證、限定語、不確定性與人工責任。</p></div></div>
+        <div class="writer-toolbar panel"><label>選擇主張<select id="writer-claim"></select></label><button class="button primary" id="generate-button">產生證據約束草稿</button></div>
+        <div id="writer-result" class="empty-state">選擇主張後產生草稿。</div>
+      </section>
+
+      <section class="view" id="view-framework">
+        <div class="section-intro"><div><span class="section-no">LOCALIZED MODEL</span><h2>HGPF 四層與31項欄位</h2><p>不是把GPS改名，而是把客家族譜中的源流、遷徙、郎名、客語、墓葬、風水與治理轉成可稽核資料結構。</p></div></div>
+        <div id="layer-grid" class="layer-grid"></div>
+        <article class="panel framework-panel">
+          <div class="panel-head"><h3>2013 Metadata → HGPF 四層映射</h3><label class="mini-search">篩選<input id="framework-filter" placeholder="源流、風水、客語…"></label></div>
+          <div class="table-wrap tall"><table class="framework-table"><thead><tr><th>#</th><th>類別</th><th>2013項目</th><th>在地名稱</th><th>主要證據域</th><th>M3稽核焦點</th></tr></thead><tbody id="framework-table"></tbody></table></div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="claim-dialog">
+    <form method="dialog" id="claim-form" class="dialog-form">
+      <div class="dialog-head"><div><span class="section-no">NEW CLAIM</span><h2>建立可稽核主張</h2></div><button value="cancel" class="icon-button" aria-label="關閉">×</button></div>
+      <label>主體<input id="claim-subject" required placeholder="例如：張氏來臺祖源"></label>
+      <label>主張文字<textarea id="claim-text" required placeholder="以一句可被支持或反駁的陳述表達"></textarea></label>
+      <div class="field-row"><label>類型<select id="claim-type"><option>譜系主張</option><option>身分主張</option><option>遷徙主張</option><option>語言主張</option><option>風水／墓葬主張</option></select></label><label>HGPF欄位<select id="claim-field"></select></label></div>
+      <label>初始信心<select id="claim-confidence"><option>待查</option><option>可能</option><option>很可能</option><option>已證</option></select></label>
+      <div class="dialog-actions"><button value="cancel" class="button ghost">取消</button><button value="default" class="button primary" id="claim-save">建立主張</button></div>
+    </form>
+  </dialog>
+  <script src="/static/app.js?v=3"></script>
+</body>
+</html>
