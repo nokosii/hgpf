@@ -9,6 +9,41 @@ async function api(path, options={}) {
   if (!response.ok) { let message=`HTTP ${response.status}`; try { const e=await response.json(); message=e.detail||message; } catch {} throw new Error(message); }
   return response.status===204?null:response.json();
 }
+function formatBytes(value){
+  if(!Number.isFinite(value)||value<=0)return '0 B';
+  const units=['B','KB','MB','GB'];let size=value,index=0;
+  while(size>=1024&&index<units.length-1){size/=1024;index+=1}
+  return `${size>=10||index===0?Math.round(size):size.toFixed(1)} ${units[index]}`;
+}
+function setUploadProgress({fileName,percent=0,stage='準備上傳',detail='',stateName='active'}){
+  const value=Math.max(0,Math.min(100,Math.round(percent)));
+  const panel=$('#upload-progress');
+  panel.hidden=false;panel.dataset.state=stateName;
+  $('#upload-progress-file').textContent=fileName||'—';
+  $('#upload-progress-stage').textContent=stage;
+  $('#upload-progress-percent').textContent=`${value}%`;
+  $('#upload-progress-bar').style.width=`${value}%`;
+  $('#upload-progress-track').setAttribute('aria-valuenow',String(value));
+  $('#upload-progress-detail').textContent=detail||stage;
+}
+function uploadDocumentWithProgress(file,onProgress){
+  return new Promise((resolve,reject)=>{
+    const form=new FormData();form.append('file',file);
+    const request=new XMLHttpRequest();request.open('POST','/api/documents/upload');request.responseType='json';
+    request.upload.addEventListener('progress',event=>{
+      if(!event.lengthComputable)return;
+      onProgress(Math.round((event.loaded/event.total)*100),event.loaded,event.total);
+    });
+    request.addEventListener('load',()=>{
+      const body=request.response||{};
+      if(request.status>=200&&request.status<300){resolve(body);return}
+      reject(new Error(body.detail||`HTTP ${request.status}`));
+    });
+    request.addEventListener('error',()=>reject(new Error('網路中斷，文件上傳失敗。')));
+    request.addEventListener('abort',()=>reject(new Error('文件上傳已取消。')));
+    request.send(form);
+  });
+}
 function escapeHtml(value=''){return String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
 function truncate(text='', n=260){return text.length>n?text.slice(0,n)+'……':text;}
 function toast(message,error=false){const node=$('#toast');node.textContent=message;node.className=error?'show error':'show';setTimeout(()=>node.className='',3200)}
@@ -117,7 +152,24 @@ document.addEventListener('click',async event=>{
   const del=event.target.closest('[data-delete-evidence]');if(del){if(confirm('移除此證據關係？原始文獻不會刪除。')){await api(`/api/evidence/${del.dataset.deleteEvidence}`,{method:'DELETE'});await loadClaims(state.selectedClaim);toast('已移除證據關係')}return}
   if(event.target.id==='new-claim-button'){$('#claim-dialog').showModal();return}
   if(event.target.id==='seed-button'){event.target.disabled=true;try{const r=await api('/api/seed',{method:'POST',body:JSON.stringify({reset:false})});toast(`示範資料就緒：${r.documents.length} 份文獻`);await Promise.all([loadDocuments(),loadClaims(),loadDashboard()])}catch(e){toast(e.message,true)}finally{event.target.disabled=false}return}
-  if(event.target.id==='upload-button'){const file=$('#upload-file').files[0];if(!file){toast('請先選擇檔案。',true);return}const form=new FormData();form.append('file',file);try{const result=await api('/api/documents/upload',{method:'POST',body:form});toast(result.duplicate?'文件已存在，直接執行預檢':'文件已上傳並建立索引');await loadDocuments();await runDocumentAudit(result.id)}catch(e){toast(e.message,true)}return}
+  if(event.target.id==='upload-button'){
+    const button=event.target;const file=$('#upload-file').files[0];if(!file){toast('請先選擇檔案。',true);return}
+    button.disabled=true;
+    setUploadProgress({fileName:file.name,percent:0,stage:'正在上傳文件',detail:`0 B / ${formatBytes(file.size)}`});
+    try{
+      const result=await uploadDocumentWithProgress(file,(percent,loaded,total)=>setUploadProgress({
+        fileName:file.name,percent,
+        stage:percent>=100?'傳輸完成，伺服器正在建立索引':'正在上傳文件',
+        detail:percent>=100?'請稍候，正在解析文件並建立可追溯段落':`${formatBytes(loaded)} / ${formatBytes(total)}`
+      }));
+      setUploadProgress({fileName:file.name,percent:100,stage:'索引完成，正在執行框架檢核',detail:'正在執行 HGPF 31項與 GPS 五項研究就緒度預檢'});
+      toast(result.duplicate?'文件已存在，直接執行預檢':'文件已上傳並建立索引');
+      await Promise.all([loadDocuments(),loadDashboard()]);await runDocumentAudit(result.id);
+      setUploadProgress({fileName:file.name,percent:100,stage:'上傳與檢核完成',detail:'文件已建立索引，HGPF／GPS 預檢報告已產生',stateName:'complete'});
+    }catch(e){setUploadProgress({fileName:file.name,percent:0,stage:'上傳或處理失敗',detail:e.message,stateName:'error'});toast(e.message,true)}
+    finally{button.disabled=false}
+    return;
+  }
   if(event.target.id==='audit-button'){const id=Number($('#audit-claim').value);if(!id){toast('尚無可稽核主張。',true);return}try{renderAudit(await api(`/api/audit/${id}`,{method:'POST'}));await loadDashboard()}catch(e){toast(e.message,true)}return}
   if(event.target.id==='generate-button'){const id=Number($('#writer-claim').value);if(!id){toast('尚無主張。',true);return}try{renderWriter(await api('/api/drafts',{method:'POST',body:JSON.stringify({claim_id:id})}));toast('已產生可審核草稿')}catch(e){toast(e.message,true)}return}
   if(event.target.id==='save-resolution'){try{await api(`/api/claims/${state.selectedClaim}`,{method:'PATCH',body:JSON.stringify({confidence:$('#claim-confidence-edit').value,resolution_note:$('#resolution-note').value,reviewer:$('#claim-reviewer').value,status:'人工複核'})});toast('已儲存具名人工判斷');await loadClaims(state.selectedClaim)}catch(e){toast(e.message,true)}return}
@@ -126,7 +178,11 @@ document.addEventListener('click',async event=>{
 
 $('#search-form').addEventListener('submit',runSearch);
 $('#import-form').addEventListener('submit',async event=>{event.preventDefault();try{const result=await api('/api/documents/import',{method:'POST',body:JSON.stringify({path:$('#import-path').value,source_type:$('#import-type').value,access_level:$('#import-access').value})});toast(result.duplicate?'此文件已建檔，直接執行預檢。':'文件已建立可追溯索引');await Promise.all([loadDocuments(),loadDashboard()]);await runDocumentAudit(result.id)}catch(e){toast(e.message,true)}});
-$('#upload-file').addEventListener('change',event=>{$('#upload-name').textContent=event.target.files[0]?.name||'尚未選擇檔案'});
+$('#upload-file').addEventListener('change',event=>{
+  const file=event.target.files[0];$('#upload-name').textContent=file?`${file.name}・${formatBytes(file.size)}`:'尚未選擇檔案';
+  if(file)setUploadProgress({fileName:file.name,percent:0,stage:'準備上傳',detail:`檔案大小 ${formatBytes(file.size)}`,stateName:'ready'});
+  else $('#upload-progress').hidden=true;
+});
 $('#claim-form').addEventListener('submit',async event=>{event.preventDefault();try{const c=await api('/api/claims',{method:'POST',body:JSON.stringify({claim_type:$('#claim-type').value,subject:$('#claim-subject').value,text:$('#claim-text').value,hgpf_field_id:Number($('#claim-field').value)||null,confidence:$('#claim-confidence').value,asserted_value:''})});$('#claim-dialog').close();toast('已建立研究主張');await loadClaims(c.id)}catch(e){toast(e.message,true)}});
 $('#framework-filter').addEventListener('input',e=>renderFramework(e.target.value));
 

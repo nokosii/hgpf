@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="HGPF AI-RAG 臺灣客家族譜證據數位治理系統">
   <title>HGPF｜客家族譜證據治理</title>
-  <link rel="stylesheet" href="/static/style.css?v=3">
+  <link rel="stylesheet" href="/static/style.css?v=4">
 </head>
 <body>
   <div class="shell">
@@ -99,6 +99,14 @@
             <label class="dropzone" for="upload-file"><span>＋</span><strong>選擇文件</strong><small>檔案留在本機 data/uploads</small></label>
             <input id="upload-file" type="file" accept=".md,.txt,.pdf,.docx" hidden>
             <p id="upload-name" class="muted">尚未選擇檔案</p>
+            <div id="upload-progress" class="upload-progress" role="status" aria-live="polite" hidden>
+              <div class="upload-progress-head">
+                <div><small>目前處理</small><strong id="upload-progress-file">—</strong><span id="upload-progress-stage">準備上傳</span></div>
+                <b id="upload-progress-percent">0%</b>
+              </div>
+              <div id="upload-progress-track" class="upload-progress-track" role="progressbar" aria-label="文件上傳進度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="upload-progress-bar"></span></div>
+              <small id="upload-progress-detail">等待開始</small>
+            </div>
             <button class="button light" id="upload-button">上傳、索引並檢核</button>
           </article>
         </div>
@@ -166,6 +174,6 @@
       <div class="dialog-actions"><button value="cancel" class="button ghost">取消</button><button value="default" class="button primary" id="claim-save">建立主張</button></div>
     </form>
   </dialog>
-  <script src="/static/app.js?v=3"></script>
+  <script src="/static/app.js?v=4"></script>
 </body>
 </html>
