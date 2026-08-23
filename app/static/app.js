@@ -1,5 +1,5 @@
 const state = { framework: null, documents: [], claims: [], selectedClaim: null, searchResults: [] };
-const titles = {dashboard:'研究總覽',documents:'文獻與索引',search:'混合檢索',claims:'主張與證據',audit:'GPS 五項稽核',writer:'受控書寫室',framework:'HGPF 31項框架'};
+const titles = {dashboard:'研究總覽',documents:'文獻與索引',search:'混合檢索',claims:'主張與證據',audit:'GPS 五項稽核',writer:'輔助書寫',framework:'HGPF 31項框架'};
 const $ = (s, root=document) => root.querySelector(s);
 const $$ = (s, root=document) => [...root.querySelectorAll(s)];
 
@@ -140,7 +140,8 @@ async function renderAudit(result){
 }
 
 function renderWriter(draft){
-  $('#writer-result').className=''; $('#writer-result').innerHTML=`<article class="writer-card"><div class="draft-paper"><span class="section-no">DRAFT ${draft.id}・${escapeHtml(draft.status)}・${escapeHtml(draft.evidence_state||'待查')}</span><h2>${escapeHtml(draft.title)}</h2><pre>${escapeHtml(draft.content)}</pre></div><aside class="citation-panel"><h3>證據卡</h3>${draft.citations.map(c=>`<div class="citation-card"><b>〔${c.label}〕${escapeHtml(c.relation)}</b><br>${escapeHtml(c.document_title)}・${escapeHtml(c.locator)}<br><span class="muted">存取：${escapeHtml(c.access_level)}・OCR可用性 ${Math.round((c.quality_score??1)*100)}<br>${escapeHtml(c.excerpt)}</span></div>`).join('')}<div class="review-form"><strong>人工覆核</strong><label>狀態<select id="draft-status"><option>Needs-further-research</option><option>Human-reviewed</option><option>Approved-for-publication</option></select></label><label>覆核者<input id="draft-reviewer"></label><label>說明<textarea id="draft-note"></textarea></label><button class="button primary" data-review-draft="${draft.id}">儲存覆核</button></div></aside></article>`;
+  const terms=(draft.detected_terms||[]).map(term=>`<span class="hakka-term">${escapeHtml(term)}</span>`).join('');
+  $('#writer-result').className=''; $('#writer-result').innerHTML=`<article class="writer-card"><div class="draft-paper"><span class="section-no">DRAFT ${draft.id}・${escapeHtml(draft.writing_mode||'一般證明摘要')}・${escapeHtml(draft.status)}・${escapeHtml(draft.evidence_state||'待查')}</span><h2>${escapeHtml(draft.title)}</h2>${draft.writing_mode==='客家證據書寫'?`<div class="hakka-term-row"><b>來源明示詞</b>${terms||'<span class="hakka-term missing">未檢出</span>'}</div>`:''}<pre>${escapeHtml(draft.content)}</pre></div><aside class="citation-panel"><h3>證據卡</h3>${draft.citations.map(c=>`<div class="citation-card"><b>〔${c.label}〕${escapeHtml(c.relation)}</b><br>${escapeHtml(c.document_title)}・${escapeHtml(c.locator)}${c.hakka_terms?.length?`<br><span class="hakka-citation-terms">明示詞：${c.hakka_terms.map(escapeHtml).join('、')}</span>`:''}<br><span class="muted">存取：${escapeHtml(c.access_level)}・OCR可用性 ${Math.round((c.quality_score??1)*100)}<br>${escapeHtml(c.excerpt)}</span></div>`).join('')}<div class="review-form"><strong>人工覆核</strong><label>狀態<select id="draft-status"><option>Needs-further-research</option><option>Human-reviewed</option><option>Approved-for-publication</option></select></label><label>覆核者<input id="draft-reviewer"></label><label>說明<textarea id="draft-note"></textarea></label><button class="button primary" data-review-draft="${draft.id}">儲存覆核</button></div></aside></article>`;
 }
 
 document.addEventListener('click',async event=>{
@@ -171,7 +172,7 @@ document.addEventListener('click',async event=>{
     return;
   }
   if(event.target.id==='audit-button'){const id=Number($('#audit-claim').value);if(!id){toast('尚無可稽核主張。',true);return}try{renderAudit(await api(`/api/audit/${id}`,{method:'POST'}));await loadDashboard()}catch(e){toast(e.message,true)}return}
-  if(event.target.id==='generate-button'){const id=Number($('#writer-claim').value);if(!id){toast('尚無主張。',true);return}try{renderWriter(await api('/api/drafts',{method:'POST',body:JSON.stringify({claim_id:id})}));toast('已產生可審核草稿')}catch(e){toast(e.message,true)}return}
+  if(event.target.id==='generate-button'){const id=Number($('#writer-claim').value);if(!id){toast('尚無主張。',true);return}try{const mode=$('#writer-mode').value;renderWriter(await api('/api/drafts',{method:'POST',body:JSON.stringify({claim_id:id,writing_mode:mode})}));toast(`已產生${mode}草稿`)}catch(e){toast(e.message,true)}return}
   if(event.target.id==='save-resolution'){try{await api(`/api/claims/${state.selectedClaim}`,{method:'PATCH',body:JSON.stringify({confidence:$('#claim-confidence-edit').value,resolution_note:$('#resolution-note').value,reviewer:$('#claim-reviewer').value,status:'人工複核'})});toast('已儲存具名人工判斷');await loadClaims(state.selectedClaim)}catch(e){toast(e.message,true)}return}
   const review=event.target.closest('[data-review-draft]');if(review){try{await api(`/api/drafts/${review.dataset.reviewDraft}`,{method:'PATCH',body:JSON.stringify({status:$('#draft-status').value,reviewer:$('#draft-reviewer').value,review_note:$('#draft-note').value})});toast('覆核狀態已儲存')}catch(e){toast(e.message,true)}return}
 });

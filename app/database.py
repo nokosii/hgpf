@@ -120,6 +120,7 @@ def init_db() -> None:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 claim_id INTEGER NOT NULL REFERENCES claims(id) ON DELETE CASCADE,
                 title TEXT NOT NULL,
+                writing_mode TEXT NOT NULL DEFAULT '一般證明摘要',
                 content TEXT NOT NULL,
                 citations_json TEXT NOT NULL DEFAULT '[]',
                 status TEXT NOT NULL DEFAULT 'Evidence-linked',
@@ -180,6 +181,13 @@ def init_db() -> None:
         if "quality_flags_json" not in passage_columns:
             db.execute(
                 "ALTER TABLE passages ADD COLUMN quality_flags_json TEXT NOT NULL DEFAULT '[]'"
+            )
+        draft_columns = {
+            row["name"] for row in db.execute("PRAGMA table_info(drafts)").fetchall()
+        }
+        if "writing_mode" not in draft_columns:
+            db.execute(
+                "ALTER TABLE drafts ADD COLUMN writing_mode TEXT NOT NULL DEFAULT '一般證明摘要'"
             )
         try:
             db.execute(

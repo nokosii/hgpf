@@ -27,16 +27,20 @@ class HGPFCoreTests(unittest.TestCase):
         self.assertEqual(["M1", "M2", "M3", "M4"], [layer["id"] for layer in LAYERS])
 
     def test_ingest_search_claim_audit_and_write(self):
+        from fastapi import HTTPException
+
         from app.audit import audit_claim
         from app.database import db_session, utc_now
         from app.document_audit import audit_document
         from app.ingest import import_document
+        from app.main import review_draft
         from app.retrieval import search
+        from app.schemas import DraftReview
         from app.writer import generate_draft
 
         source = Path(self.tempdir.name) / "sample.md"
         source.write_text(
-            "# 張氏族譜\n\n先祖原居廣東大埔，後遷臺灣苗栗。\n\n另譜對開基年代未詳，疑有傳抄之誤。",
+            "# 張氏族譜\n\n先祖原居廣東大埔，後遷臺灣苗栗，後人口述家中曾使用客話。\n\n另譜對開基年代未詳，疑有傳抄之誤。",
             encoding="utf-8",
         )
         document = import_document(source)
@@ -66,6 +70,48 @@ class HGPFCoreTests(unittest.TestCase):
         draft = generate_draft(claim_id)
         self.assertIn("不構成GPS認證", draft["content"])
         self.assertEqual("條件支持", draft["evidence_state"])
+        hakka_draft = generate_draft(claim_id, writing_mode="客家證據書寫")
+        self.assertEqual("客家證據書寫", hakka_draft["writing_mode"])
+        self.assertIn("客話", hakka_draft["detected_terms"])
+        self.assertIn("三、禁止外推", hakka_draft["content"])
+        self.assertIn("不得把客籍等同客語能力", hakka_draft["content"])
+        no_term_source = Path(self.tempdir.name) / "no-hakka-term.md"
+        no_term_source.write_text(
+            "# 另一族譜\n\n開基年代未詳，疑有傳抄之誤。譜中只記載先人遷居、修祠與祭祖經過，"
+            "未記錄族群自稱、語言使用或行政籍屬。此段僅供測試缺少明示證據時的發布閘門。",
+            encoding="utf-8",
+        )
+        no_term_document = import_document(no_term_source)
+        with db_session() as db:
+            no_term_passage_id = db.execute(
+                "SELECT id FROM passages WHERE document_id=? ORDER BY ordinal LIMIT 1",
+                (no_term_document["id"],),
+            ).fetchone()["id"]
+            cursor = db.execute(
+                """
+                INSERT INTO claims(claim_type, subject, text, confidence, status, created_at, updated_at)
+                VALUES ('客家身分主張','無明示詞測試','此房派具有客家身分','待查','草稿',?,?)
+                """,
+                (utc_now(), utc_now()),
+            )
+            no_term_claim_id = cursor.lastrowid
+            db.execute(
+                "INSERT INTO evidence_links(claim_id,passage_id,relation,weight,note,created_at) VALUES (?,?,?,?,?,?)",
+                (no_term_claim_id, no_term_passage_id, "支持", 0.5, "未含客家明示詞", utc_now()),
+            )
+        no_term_draft = generate_draft(no_term_claim_id, writing_mode="客家證據書寫")
+        self.assertEqual("客家證據不足", no_term_draft["evidence_state"])
+        self.assertEqual("Audit-flagged", no_term_draft["status"])
+        with self.assertRaises(HTTPException) as caught:
+            review_draft(
+                no_term_draft["id"],
+                DraftReview(
+                    status="Approved-for-publication",
+                    reviewer="測試者",
+                    review_note="不得通過無明示詞草稿",
+                ),
+            )
+        self.assertEqual(409, caught.exception.status_code)
         audit = audit_claim(claim_id)
         self.assertEqual(5, len(audit["items"]))
         self.assertLessEqual(audit["score"], 100)

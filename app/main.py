@@ -316,7 +316,7 @@ def run_audit(claim_id: int) -> dict:
 @app.post("/api/drafts")
 def create_draft(request: DraftCreate) -> dict:
     try:
-        return generate_draft(request.claim_id, request.title)
+        return generate_draft(request.claim_id, request.title, request.writing_mode)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -347,6 +347,16 @@ def review_draft(draft_id: int, request: DraftReview) -> dict:
             citations = json.loads(draft["citations_json"] or "[]")
             if any(item.get("access_level") not in {"公開", "研究使用"} for item in citations):
                 raise HTTPException(status_code=409, detail="草稿含宗族限定或敏感證據，不能直接核定為公開版本。")
+            if draft.get("writing_mode") == "客家證據書寫":
+                has_explicit_hakka_support = any(
+                    item.get("relation") == "支持" and item.get("hakka_terms")
+                    for item in citations
+                )
+                if not has_explicit_hakka_support:
+                    raise HTTPException(
+                        status_code=409,
+                        detail="客家證據書寫尚無明示客家／客族／客語／客話／客籍的支持證據，不能核准發布。",
+                    )
         cursor = db.execute(
             """
             UPDATE drafts SET status=?, reviewer=?, review_note=?, updated_at=? WHERE id=?

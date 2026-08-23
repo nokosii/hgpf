@@ -49,6 +49,7 @@ class EvidenceCreate(BaseModel):
 class DraftCreate(BaseModel):
     claim_id: int
     title: str | None = None
+    writing_mode: Literal["一般證明摘要", "客家證據書寫"] = "一般證明摘要"
 
 
 class DraftReview(BaseModel):
